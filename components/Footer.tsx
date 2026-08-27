@@ -85,7 +85,7 @@ export default function Footer() {
           Nous trouver
         </h4>
 
-        <div className="relative rounded h-[300px] w-full overflow-hidden border border-[#c4956a33] lg:h-[380px]">
+        <div className="relative rounded h-[300px] w-full overflow-hidden border border-[#c4956a33] lg:h-[280px]">
           <iframe
             className="h-full w-full"
             src="https://www.google.com/maps?q=alger&z=13&t=m&hl=fr&output=embed"
@@ -98,8 +98,7 @@ export default function Footer() {
       </div>
       </div>
 
-      {/* MAP */}
-     
+      
 
       {/* BOTTOM BAR */}
       <div className="flex flex-col gap-5 pt-8 text-center lg:flex-row lg:items-center lg:justify-between lg:text-left">
@@ -116,7 +115,7 @@ export default function Footer() {
             >
               {item}
             </a>
-          ))}
+          ))} 
         </div>
       </div>
     </footer>

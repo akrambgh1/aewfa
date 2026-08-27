@@ -436,16 +436,7 @@ export default function Home() {
         {/* FOOTER */}
         {/* ====================================================== */}
 
-        <footer className="border-t border-[#c4956a33] bg-[#f5ede0] px-6 py-10 lg:px-12">
-
-          <div className="flex flex-col gap-4 text-[10px] uppercase tracking-[0.2em] text-[#6b5c4e] md:flex-row md:items-center md:justify-between">
-
-            <span>© 2026 El Rayane Immobilier</span>
-
-            <span>Alger, Algérie</span>
-
-          </div>
-        </footer>
+       
 
         {/* ====================================================== */}
         {/* GLOBAL STYLES */}
