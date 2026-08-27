@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Navbar from "@/components/Navbar";
+import Link from "next/link";
 import PageTransition from "@/components/PageTransition";
 
 export default function Home() {
@@ -414,19 +414,19 @@ export default function Home() {
 
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
 
-              <a
-                href="#"
+              <Link
+                href="/projets"
                 className="bg-[#c4956a] px-8 py-4 text-[11px] uppercase tracking-[0.25em] text-white transition hover:bg-[#8b5e3c]"
               >
                 Découvrir nos projets
-              </a>
+              </Link>
 
-              <a
-                href="#"
+              <Link
+                href="/contact"
                 className="border border-white/20 px-8 py-4 text-[11px] uppercase tracking-[0.25em] text-white/70 transition hover:border-[#c4956a] hover:text-[#c4956a]"
               >
                 Nous contacter
-              </a>
+              </Link>
 
             </div>
           </div>
