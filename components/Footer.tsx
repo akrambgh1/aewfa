@@ -53,30 +53,8 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* LOCATIONS (ONLY ALGER + AREAS LOREM) */}
-        <div>
-          <h4 className="mb-6 text-[11px] uppercase tracking-[0.3em] text-[#c4956a]">
-            Localités
-          </h4>
-
-          <ul className="space-y-4">
-            <li className="text-sm text-white/45">
-              Alger — Zone Centre
-            </li>
-
-            <li className="text-sm text-white/45">
-              Alger — Quartiers Résidentiels
-            </li>
-
-            <li className="text-sm text-white/45">
-              Alger — Secteurs Modernes
-            </li>
-
-            <li className="text-sm text-white/30 italic">
-              Lorem ipsum area non définie
-            </li>
-          </ul>
-        </div>
+        {/* LOCATIONS */}
+       
 
         {/* CONTACT */}
         <div>
@@ -102,7 +80,26 @@ export default function Footer() {
             </li>
           </ul>
         </div>
+         <div >
+        <h4 className="mb-6 text-[11px] uppercase tracking-[0.3em] text-[#c4956a]">
+          Nous trouver
+        </h4>
+
+        <div className="relative rounded h-[300px] w-full overflow-hidden border border-[#c4956a33] lg:h-[380px]">
+          <iframe
+            className="h-full w-full"
+            src="https://www.google.com/maps?q=alger&z=13&t=m&hl=fr&output=embed"
+            loading="lazy"
+            allowFullScreen
+            referrerPolicy="no-referrer-when-downgrade"
+            title="Localisation à Alger"
+          />
+        </div>
       </div>
+      </div>
+
+      {/* MAP */}
+     
 
       {/* BOTTOM BAR */}
       <div className="flex flex-col gap-5 pt-8 text-center lg:flex-row lg:items-center lg:justify-between lg:text-left">

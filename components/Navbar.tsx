@@ -70,14 +70,7 @@ export default function Navbar() {
             </Link>
           </li>
 
-          <li>
-            <Link
-              href="/localites"
-              className="text-[11px] uppercase tracking-[0.25em] text-[#6b5c4e] transition hover:text-[#c4956a]"
-            >
-              Localités
-            </Link>
-          </li>
+         
 
           <li>
             <Link
@@ -155,15 +148,7 @@ export default function Navbar() {
         </Link>
       </li>
 
-      <li>
-        <Link
-          href="/localites"
-          onClick={closeMenu}
-          className="block border-b border-[#c4956a26] py-4 text-[12px] uppercase tracking-[0.25em] text-[#6b5c4e] transition hover:text-[#c4956a]"
-        >
-          Localités
-        </Link>
-      </li>
+      
 
       <li>
         <Link
