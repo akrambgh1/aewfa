@@ -66,7 +66,7 @@ export default function LocalitesPage() {
         <section className="relative flex min-h-screen items-end">
           <div className="absolute inset-0">
             <Image
-  src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=2000&q=80"
+  src="/images/diar-el-rayane.png"
   alt="Résidence moderne"
   fill
   priority
