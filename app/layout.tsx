@@ -20,7 +20,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Diar Prestige",
+  title: "El Rayane Immobilier",
   description: "Immobilier de luxe en Algérie",
 };
 

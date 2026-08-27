@@ -51,11 +51,11 @@ export default function Navbar() {
         {/* Logo */}
         <Link href="/" className="group" onClick={closeMenu}>
           <div className="font-serif text-2xl font-light tracking-wider sm:text-3xl">
-            Immobilier
+            El Rayane Immobilier
           </div>
 
           <div className="mt-1 text-[8px] uppercase tracking-[0.3em] text-[#c4956a] sm:text-[10px] sm:tracking-[0.4em]">
-            Immobilier de Luxe — الجزائر
+            Immobilier de Luxe — Algérie
           </div>
         </Link>
 

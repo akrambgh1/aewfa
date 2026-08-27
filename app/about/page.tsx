@@ -9,7 +9,7 @@ export default function ApprochePage() {
       <main className="bg-[#f5ede0] text-[#1a1410]">
 
         {/* HERO */}
-        <section className="relative flex min-h-[90vh] items-center overflow-hidden">
+        <section className="relative flex min-h-[80vh] items-center overflow-hidden">
           <Image
             src="https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=2000&auto=format&fit=crop"
             alt="Architecture moderne"
@@ -17,9 +17,9 @@ export default function ApprochePage() {
             className="object-cover brightness-[0.55]"
           />
 
-          <div className="absolute inset-0 bg-gradient-to-r from-[#1a1410]/90 via-[#1a1410]/60 to-transparent" />
+          <div className="absolute   inset-0 bg-gradient-to-r from-[#1a1410]/90 via-[#1a1410]/60 to-transparent" />
 
-          <div className="relative z-10 px-6 lg:px-12 max-w-4xl">
+          <div className="relative  z-10 px-6 lg:px-12 max-w-4xl">
             <p className="mb-6 text-[11px] uppercase tracking-[0.35em] text-[#c4956a]">
               El Rayane Immobilier
             </p>
@@ -78,7 +78,7 @@ export default function ApprochePage() {
         <section className="grid lg:grid-cols-2">
           <div className="relative min-h-[500px]">
             <Image
-              src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1600&auto=format&fit=crop"
+              src="/images/1.jpg"
               alt="Construction"
               fill
               className="object-cover brightness-[0.7]"

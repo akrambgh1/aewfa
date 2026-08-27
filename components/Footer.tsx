@@ -7,17 +7,17 @@ export default function Footer() {
 
         {/* BRAND */}
         <div>
-          <div className="font-serif text-4xl font-light">
-            Immobilier
-          </div>
+         <div className="font-serif text-4xl font-light">
+  El Rayane Immobilier
+</div>
 
-          <p className="mt-6 max-w-xs text-sm leading-8 text-white/40">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-          </p>
+<p className="mt-6 max-w-xs text-sm leading-8 text-white/40">
+  Votre partenaire de confiance pour trouver des biens d’exception
+  et concrétiser vos projets immobiliers à Alger.
+</p>
         </div>
 
-        {/* PROPERTIES */}
+        {/* PROPERTIES 
         <div>
           <h4 className="mb-6 text-[11px] uppercase tracking-[0.3em] text-[#c4956a]">
             Propriétés
@@ -51,7 +51,7 @@ export default function Footer() {
               </Link>
             </li>
           </ul>
-        </div>
+        </div>*/}
 
         {/* LOCATIONS */}
        
