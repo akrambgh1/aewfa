@@ -1,0 +1,12 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Only a signed-in user (your dashboard login) can read or write
+    // project data — this is the actual security boundary, not the
+    // /dashboard URL or the noindex tag.
+    match /projects/{projectId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

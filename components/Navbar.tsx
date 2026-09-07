@@ -51,7 +51,7 @@ export default function Navbar() {
         {/* Logo */}
         <Link href="/" className="group" onClick={closeMenu}>
           <div className="font-serif text-2xl font-light tracking-wider sm:text-3xl">
-            El Rayane Immobilier
+            Rayen House Immo
           </div>
 
           <div className="mt-1 text-[8px] uppercase tracking-[0.3em] text-[#c4956a] sm:text-[10px] sm:tracking-[0.4em]">

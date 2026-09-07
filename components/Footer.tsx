@@ -86,14 +86,15 @@ export default function Footer() {
         </h4>
 
         <div className="relative rounded h-[300px] w-full overflow-hidden border border-[#c4956a33] lg:h-[280px]">
-          <iframe
-            className="h-full w-full"
-            src="https://www.google.com/maps?q=alger&z=13&t=m&hl=fr&output=embed"
-            loading="lazy"
-            allowFullScreen
-            referrerPolicy="no-referrer-when-downgrade"
-            title="Localisation à Alger"
-          />
+         <iframe
+  src="https://www.google.com/maps?q=36.7294335,3.0827473&output=embed"
+  width="100%"
+  height="450"
+  style={{ border: 0 }}
+  allowFullScreen
+  loading="lazy"
+  referrerPolicy="strict-origin-when-cross-origin"
+/>
         </div>
       </div>
       </div>
@@ -103,7 +104,7 @@ export default function Footer() {
       {/* BOTTOM BAR */}
       <div className="flex flex-col gap-5 pt-8 text-center lg:flex-row lg:items-center lg:justify-between lg:text-left">
         <p className="text-xs tracking-wide text-white/25">
-          © 2026 Immobilier — Lorem ipsum all rights reserved
+          © 2026 rayen house immo —  all rights reserved
         </p>
 
         <div className="flex justify-center gap-6 lg:justify-end">

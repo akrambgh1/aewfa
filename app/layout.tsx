@@ -20,13 +20,12 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "El Rayane Immobilier",
-  description: "Immobilier de luxe en Algérie",
+  title: "RAYEN PROMOTION",
+  description: "PROMOTION de luxe en Algérie",
   appleWebApp: {
-    title: "El Rayane Immobilier",
+    title: "RAYEN PROMOTION",
   },
 };
-
 export default function RootLayout({
   children,
 }: {
@@ -37,7 +36,7 @@ export default function RootLayout({
       <body
         className={`${montserrat.variable} ${cormorant.variable}`}
       >
-        <Cursor />
+        
         <Navbar />
         <Providers>{children}</Providers>
         <Footer />
