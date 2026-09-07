@@ -24,13 +24,13 @@ export default function Home() {
   // Load projects from Firestore
   useEffect(() => {
     const unsubscribe = subscribeToProjects(
-      (data: Project[]) => {
-        setProjects(data);
-      },
-      (error) => {
-        console.error("Could not load public projects:", error);
-      }
-    );
+  (data: Project[]) => {
+    setProjects(data);
+  },
+  (error: unknown) => {
+    console.error("Could not load public projects:", error);
+  }
+);
 
     return unsubscribe;
   }, []);

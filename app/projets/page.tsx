@@ -28,7 +28,7 @@ export default function CollectionPage() {
         setResidences(data);
         setLoading(false);
       },
-      (error) => {
+      (error: unknown) => {
         console.error("Could not load residences:", error);
         setLoading(false);
       }

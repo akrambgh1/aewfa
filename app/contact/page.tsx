@@ -3,28 +3,52 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import type {
+  ChangeEvent,
+  FormEvent,
+} from "react";
+
 import PageTransition from "@/components/PageTransition";
 import { addContactMessage } from "@/lib/contact";
 
+type ContactForm = {
+  name: string;
+  email: string;
+  message: string;
+};
+
+type ContactField = keyof ContactForm;
+
 export default function ContactPage() {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    message: "",
-  });
+  const [form, setForm] =
+    useState<ContactForm>({
+      name: "",
+      email: "",
+      message: "",
+    });
 
-  const [sending, setSending] = useState(false);
-  const [success, setSuccess] = useState("");
-  const [error, setError] = useState("");
+  const [sending, setSending] =
+    useState<boolean>(false);
 
-  function updateField(field, value) {
+  const [success, setSuccess] =
+    useState<string>("");
+
+  const [error, setError] =
+    useState<string>("");
+
+  function updateField(
+    field: ContactField,
+    value: string
+  ): void {
     setForm((current) => ({
       ...current,
       [field]: value,
     }));
   }
 
-  async function handleSubmit(event) {
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>
+  ): Promise<void> {
     event.preventDefault();
 
     setSuccess("");
@@ -36,12 +60,16 @@ export default function ContactPage() {
     }
 
     if (!form.email.trim()) {
-      setError("Veuillez entrer votre adresse e-mail.");
+      setError(
+        "Veuillez entrer votre adresse e-mail."
+      );
       return;
     }
 
     if (!form.message.trim()) {
-      setError("Veuillez écrire votre message.");
+      setError(
+        "Veuillez écrire votre message."
+      );
       return;
     }
 
@@ -63,8 +91,11 @@ export default function ContactPage() {
       setSuccess(
         "Votre message a bien été envoyé. Notre équipe vous répondra rapidement."
       );
-    } catch (err) {
-      console.error("Contact form error:", err);
+    } catch (err: unknown) {
+      console.error(
+        "Contact form error:",
+        err
+      );
 
       setError(
         "Impossible d'envoyer votre message. Veuillez réessayer."
@@ -72,6 +103,33 @@ export default function ContactPage() {
     } finally {
       setSending(false);
     }
+  }
+
+  function handleNameChange(
+    event: ChangeEvent<HTMLInputElement>
+  ): void {
+    updateField(
+      "name",
+      event.target.value
+    );
+  }
+
+  function handleEmailChange(
+    event: ChangeEvent<HTMLInputElement>
+  ): void {
+    updateField(
+      "email",
+      event.target.value
+    );
+  }
+
+  function handleMessageChange(
+    event: ChangeEvent<HTMLTextAreaElement>
+  ): void {
+    updateField(
+      "message",
+      event.target.value
+    );
   }
 
   return (
@@ -104,13 +162,12 @@ export default function ContactPage() {
               onSubmit={handleSubmit}
               className="mt-12 space-y-5"
             >
+
               <input
                 type="text"
                 placeholder="Nom complet"
                 value={form.name}
-                onChange={(event) =>
-                  updateField("name", event.target.value)
-                }
+                onChange={handleNameChange}
                 disabled={sending}
                 className="w-full border border-[#c4956a30] bg-white/40 px-5 py-4 text-[#1a1410] placeholder:text-[#6b5c4e] backdrop-blur focus:border-[#c4956a] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
               />
@@ -119,9 +176,7 @@ export default function ContactPage() {
                 type="email"
                 placeholder="Email"
                 value={form.email}
-                onChange={(event) =>
-                  updateField("email", event.target.value)
-                }
+                onChange={handleEmailChange}
                 disabled={sending}
                 className="w-full border border-[#c4956a30] bg-white/40 px-5 py-4 text-[#1a1410] placeholder:text-[#6b5c4e] backdrop-blur focus:border-[#c4956a] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
               />
@@ -129,9 +184,7 @@ export default function ContactPage() {
               <textarea
                 placeholder="Votre message"
                 value={form.message}
-                onChange={(event) =>
-                  updateField("message", event.target.value)
-                }
+                onChange={handleMessageChange}
                 disabled={sending}
                 className="h-40 w-full resize-none border border-[#c4956a30] bg-white/40 px-5 py-4 text-[#1a1410] placeholder:text-[#6b5c4e] backdrop-blur focus:border-[#c4956a] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
               />
@@ -166,13 +219,16 @@ export default function ContactPage() {
                   "Envoyer le message"
                 )}
               </button>
+
             </form>
+
           </div>
         </div>
 
         {/* RIGHT SIDE - IMAGE */}
 
         <div className="relative hidden flex-1 lg:block">
+
           <Image
             src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1800&q=90"
             alt="Appartement de luxe"
@@ -200,8 +256,11 @@ export default function ContactPage() {
             </p>
 
           </div>
+
         </div>
+
       </main>
     </PageTransition>
   );
 }
+

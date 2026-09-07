@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { Timestamp } from "firebase/firestore";
+
 import ProjectCard from "./ProjectCard";
 import AddProjectDrawer from "./AddProjectDrawer";
 import { STATUSES } from "@/lib/dashboard/statuses";
@@ -17,53 +19,150 @@ import {
 
 import { useDashboardAuth } from "@/context/dashboard/AuthContext";
 
+/* ===================================================== */
+/* TYPES */
+/* ===================================================== */
+
+type ProjectStatus = string;
+
+export interface Project {
+  id: string;
+  apartments?: number | string;
+  status?: ProjectStatus;
+  [key: string]: unknown;
+}
+
+export interface ProjectData {
+  id?: string;
+  apartments?: number | string;
+  status?: ProjectStatus;
+  [key: string]: unknown;
+}
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  message: string;
+  read: boolean;
+  createdAt?: Timestamp | Date | string | number | null;
+  [key: string]: unknown;
+}
+
+type Filter = "all" | string;
+
+type ActiveSection = "projects" | "messages";
+
+interface ProjectsSectionProps {
+  projects: Project[];
+  visible: Project[];
+  loading: boolean;
+  loadError: string;
+  filter: Filter;
+  setFilter: React.Dispatch<React.SetStateAction<Filter>>;
+  updateStatus: (
+    id: string,
+    status: string
+  ) => Promise<void>;
+  removeProject: (id: string) => Promise<unknown>;
+  onAdd: () => void;
+  onEdit: (project: Project) => void;
+}
+
+interface MessagesSectionProps {
+  messages: ContactMessage[];
+  loading: boolean;
+  error: string;
+  onOpen: (
+    message: ContactMessage
+  ) => Promise<void>;
+  onDelete: (
+    id: string
+  ) => Promise<void>;
+}
+
+interface MessageRowProps {
+  message: ContactMessage;
+  onOpen: () => void;
+  onDelete: () => void;
+}
+
+interface MessageModalProps {
+  message: ContactMessage;
+  onClose: () => void;
+  onDelete: (id: string) => Promise<void>;
+}
+
+interface StatProps {
+  label: string;
+  value: number | string;
+}
+
+interface FilterPillProps {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  dot?: string;
+}
+
+interface EmptyStateProps {
+  hasProjects: boolean;
+  onAdd: () => void;
+}
+
+type FirebaseTimestampLike = {
+  toDate: () => Date;
+};
+
+/* ===================================================== */
+/* DASHBOARD */
+/* ===================================================== */
+
 export default function Dashboard() {
   const { user, logout } =
     useDashboardAuth();
 
   const [projects, setProjects] =
-    useState([]);
+    useState<Project[]>([]);
 
   const [messages, setMessages] =
-    useState([]);
+    useState<ContactMessage[]>([]);
 
   const [loading, setLoading] =
-    useState(true);
+    useState<boolean>(true);
 
   const [messagesLoading, setMessagesLoading] =
-    useState(true);
+    useState<boolean>(true);
 
   const [loadError, setLoadError] =
-    useState("");
+    useState<string>("");
 
   const [messagesError, setMessagesError] =
-    useState("");
+    useState<string>("");
 
   const [drawerOpen, setDrawerOpen] =
-    useState(false);
+    useState<boolean>(false);
 
   const [editingProject, setEditingProject] =
-    useState(null);
+    useState<Project | null>(null);
 
   const [filter, setFilter] =
-    useState("all");
+    useState<Filter>("all");
 
   const [activeSection, setActiveSection] =
-    useState("projects");
+    useState<ActiveSection>("projects");
 
   const [selectedMessage, setSelectedMessage] =
-    useState(null);
+    useState<ContactMessage | null>(null);
 
-  /*
-   * =====================================================
-   * PROJECTS
-   * =====================================================
-   */
+  /* ===================================================== */
+  /* PROJECTS */
+  /* ===================================================== */
 
   useEffect(() => {
     const unsubscribe =
       subscribeToProjects(
-        (data) => {
+        (data: Project[]) => {
           setProjects(data);
           setLoading(false);
         },
@@ -79,16 +178,14 @@ export default function Dashboard() {
     return unsubscribe;
   }, []);
 
-  /*
-   * =====================================================
-   * MESSAGES
-   * =====================================================
-   */
+  /* ===================================================== */
+  /* MESSAGES */
+  /* ===================================================== */
 
   useEffect(() => {
     const unsubscribe =
       subscribeToMessages(
-        (data) => {
+        (data: ContactMessage[]) => {
           setMessages(data);
           setMessagesLoading(false);
         },
@@ -104,26 +201,26 @@ export default function Dashboard() {
     return unsubscribe;
   }, []);
 
-  /*
-   * =====================================================
-   * ADD PROJECT
-   * =====================================================
-   */
+  /* ===================================================== */
+  /* ADD PROJECT */
+  /* ===================================================== */
 
-  async function addProject(data) {
+  async function addProject(
+    data: ProjectData
+  ): Promise<void> {
     await addProjectDb(data);
 
     setDrawerOpen(false);
     setEditingProject(null);
   }
 
-  /*
-   * =====================================================
-   * EDIT PROJECT
-   * =====================================================
-   */
+  /* ===================================================== */
+  /* EDIT PROJECT */
+  /* ===================================================== */
 
-  async function editProject(data) {
+  async function editProject(
+    data: ProjectData
+  ): Promise<void> {
     if (!data?.id) {
       throw new Error(
         "Identifiant du projet manquant."
@@ -141,51 +238,47 @@ export default function Dashboard() {
     setEditingProject(null);
   }
 
-  /*
-   * =====================================================
-   * OPEN EDITOR
-   * =====================================================
-   */
+  /* ===================================================== */
+  /* OPEN EDITOR */
+  /* ===================================================== */
 
-  function handleEditProject(project) {
+  function handleEditProject(
+    project: Project
+  ): void {
     setEditingProject(project);
     setDrawerOpen(true);
   }
 
-  /*
-   * =====================================================
-   * CLOSE DRAWER
-   * =====================================================
-   */
+  /* ===================================================== */
+  /* CLOSE DRAWER */
+  /* ===================================================== */
 
-  function handleDrawerClose() {
+  function handleDrawerClose(): void {
     setDrawerOpen(false);
     setEditingProject(null);
   }
 
-  /*
-   * =====================================================
-   * UPDATE STATUS
-   * =====================================================
-   */
+  /* ===================================================== */
+  /* UPDATE STATUS */
+  /* ===================================================== */
 
   async function updateStatus(
-    id,
-    status
-  ) {
+    id: string,
+    status: string
+  ): Promise<void> {
     await updateProjectStatus(
       id,
       status
     );
   }
 
-  /*
-   * =====================================================
-   * DELETE PROJECT
-   * =====================================================
-   */
+  /* ===================================================== */
+  /* DELETE PROJECT */
+  /* ===================================================== */
 
-  async function removeProject(id) {
+  async function removeProject(
+    id: string
+  ): Promise<unknown> {
     if (!id) {
       throw new Error(
         "Identifiant du projet manquant."
@@ -196,7 +289,7 @@ export default function Dashboard() {
       id
     )}`;
 
-    let response;
+    let response: Response;
 
     try {
       response = await fetch(url, {
@@ -209,7 +302,7 @@ export default function Dashboard() {
       );
     }
 
-    let data = null;
+    let data: unknown = null;
 
     try {
       data = await response.json();
@@ -218,8 +311,11 @@ export default function Dashboard() {
     }
 
     if (!response.ok) {
+      const errorData =
+        data as { error?: string } | null;
+
       throw new Error(
-        data?.error ||
+        errorData?.error ||
           `Impossible de supprimer le projet. Erreur ${response.status}.`
       );
     }
@@ -227,15 +323,13 @@ export default function Dashboard() {
     return data;
   }
 
-  /*
-   * =====================================================
-   * MESSAGE ACTIONS
-   * =====================================================
-   */
+  /* ===================================================== */
+  /* MESSAGE ACTIONS */
+  /* ===================================================== */
 
   async function handleOpenMessage(
-    message
-  ) {
+    message: ContactMessage
+  ): Promise<void> {
     setSelectedMessage(message);
 
     if (!message.read) {
@@ -243,7 +337,7 @@ export default function Dashboard() {
         await markMessageAsRead(
           message.id
         );
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(
           "Impossible de marquer le message comme lu:",
           error
@@ -253,8 +347,8 @@ export default function Dashboard() {
   }
 
   async function handleDeleteMessage(
-    id
-  ) {
+    id: string
+  ): Promise<void> {
     if (!id) return;
 
     try {
@@ -265,7 +359,7 @@ export default function Dashboard() {
       ) {
         setSelectedMessage(null);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(
         "Impossible de supprimer le message:",
         error
@@ -273,11 +367,9 @@ export default function Dashboard() {
     }
   }
 
-  /*
-   * =====================================================
-   * STATISTICS
-   * =====================================================
-   */
+  /* ===================================================== */
+  /* STATISTICS */
+  /* ===================================================== */
 
   const stats = useMemo(() => {
     const totalApartments =
@@ -318,11 +410,9 @@ export default function Dashboard() {
     };
   }, [projects, messages]);
 
-  /*
-   * =====================================================
-   * FILTER PROJECTS
-   * =====================================================
-   */
+  /* ===================================================== */
+  /* FILTER PROJECTS */
+  /* ===================================================== */
 
   const visible = useMemo(() => {
     if (filter === "all") {
@@ -337,10 +427,11 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#f5ede0]">
-      {/* HEADER */}
 
       <header className="border-b border-[#c4956a33] bg-[#f5ede0]">
+
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8 sm:flex-row sm:items-end sm:justify-between">
+
           <div>
             <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#c4956a]">
               El Rayane Immobilier
@@ -356,14 +447,13 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-3">
+
             {activeSection ===
               "projects" && (
               <button
                 type="button"
                 onClick={() => {
-                  setEditingProject(
-                    null
-                  );
+                  setEditingProject(null);
                   setDrawerOpen(true);
                 }}
                 className="bg-[#1a1410] px-5 py-3 text-[10px] uppercase tracking-[0.2em] text-white transition hover:bg-[#c4956a]"
@@ -375,18 +465,20 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={logout}
-              title={user?.email}
+              title={user?.email ?? ""}
               className="border border-[#c4956a55] px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-[#6b5c4e] transition hover:border-[#1a1410] hover:text-[#1a1410]"
             >
               Déconnexion
             </button>
+
           </div>
+
         </div>
 
-        {/* NAVIGATION */}
-
         <div className="mx-auto max-w-6xl px-6">
+
           <div className="flex gap-8">
+
             <button
               type="button"
               onClick={() =>
@@ -407,6 +499,7 @@ export default function Dashboard() {
                 "projects" && (
                 <span className="absolute bottom-0 left-0 right-0 h-px bg-[#c4956a]" />
               )}
+
             </button>
 
             <button
@@ -428,9 +521,7 @@ export default function Dashboard() {
               {stats.unreadMessages >
                 0 && (
                 <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#8f3f32] px-1.5 text-[8px] text-white">
-                  {
-                    stats.unreadMessages
-                  }
+                  {stats.unreadMessages}
                 </span>
               )}
 
@@ -438,15 +529,17 @@ export default function Dashboard() {
                 "messages" && (
                 <span className="absolute bottom-0 left-0 right-0 h-px bg-[#c4956a]" />
               )}
-            </button>
-          </div>
-        </div>
 
-        {/* PROJECT STATS */}
+            </button>
+
+          </div>
+
+        </div>
 
         {activeSection ===
           "projects" && (
           <div className="mx-auto grid max-w-6xl grid-cols-2 border-t border-[#c4956a33] sm:grid-cols-4">
+
             <Stat
               label="Projets"
               value={stats.projects}
@@ -466,14 +559,14 @@ export default function Dashboard() {
               label="Terminés"
               value={stats.completed}
             />
+
           </div>
         )}
-
-        {/* MESSAGE STATS */}
 
         {activeSection ===
           "messages" && (
           <div className="mx-auto grid max-w-6xl grid-cols-2 border-t border-[#c4956a33]">
+
             <Stat
               label="Messages"
               value={stats.messages}
@@ -481,19 +574,19 @@ export default function Dashboard() {
 
             <Stat
               label="Non lus"
-              value={
-                stats.unreadMessages
-              }
+              value={stats.unreadMessages}
             />
+
           </div>
         )}
+
       </header>
 
-      {/* MAIN */}
-
       <main className="mx-auto max-w-6xl px-6 py-8">
+
         {activeSection ===
         "projects" ? (
+
           <ProjectsSection
             projects={projects}
             visible={visible}
@@ -501,44 +594,32 @@ export default function Dashboard() {
             loadError={loadError}
             filter={filter}
             setFilter={setFilter}
-            updateStatus={
-              updateStatus
-            }
-            removeProject={
-              removeProject
-            }
+            updateStatus={updateStatus}
+            removeProject={removeProject}
             onAdd={() => {
-              setEditingProject(
-                null
-              );
+              setEditingProject(null);
               setDrawerOpen(true);
             }}
-            onEdit={
-              handleEditProject
-            }
+            onEdit={handleEditProject}
           />
+
         ) : (
+
           <MessagesSection
             messages={messages}
             loading={messagesLoading}
             error={messagesError}
-            onOpen={
-              handleOpenMessage
-            }
-            onDelete={
-              handleDeleteMessage
-            }
+            onOpen={handleOpenMessage}
+            onDelete={handleDeleteMessage}
           />
-        )}
-      </main>
 
-      {/* ADD / EDIT DRAWER */}
+        )}
+
+      </main>
 
       <AddProjectDrawer
         open={drawerOpen}
-        onClose={
-          handleDrawerClose
-        }
+        onClose={handleDrawerClose}
         onSubmit={
           editingProject
             ? editProject
@@ -547,21 +628,16 @@ export default function Dashboard() {
         project={editingProject}
       />
 
-      {/* MESSAGE MODAL */}
-
       {selectedMessage && (
         <MessageModal
           message={selectedMessage}
           onClose={() =>
-            setSelectedMessage(
-              null
-            )
+            setSelectedMessage(null)
           }
-          onDelete={
-            handleDeleteMessage
-          }
+          onDelete={handleDeleteMessage}
         />
       )}
+
     </div>
   );
 }
@@ -581,10 +657,11 @@ function ProjectsSection({
   removeProject,
   onAdd,
   onEdit,
-}) {
+}: ProjectsSectionProps) {
   return (
     <>
       <div className="mb-8 flex flex-wrap gap-2">
+
         <FilterPill
           active={filter === "all"}
           onClick={() =>
@@ -594,6 +671,7 @@ function ProjectsSection({
         />
 
         {STATUSES.map((status) => (
+
           <FilterPill
             key={status.id}
             active={
@@ -605,7 +683,9 @@ function ProjectsSection({
             label={status.label}
             dot={status.dot}
           />
+
         ))}
+
       </div>
 
       {loadError && (
@@ -615,22 +695,29 @@ function ProjectsSection({
       )}
 
       {loading ? (
+
         <div className="py-20 text-center">
           <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#6b5c4e]">
             Chargement des projets...
           </span>
         </div>
+
       ) : visible.length === 0 ? (
+
         <EmptyState
           hasProjects={
             projects.length > 0
           }
           onAdd={onAdd}
         />
+
       ) : (
+
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+
           {visible.map(
             (project, index) => (
+
               <ProjectCard
                 key={project.id}
                 project={project}
@@ -643,10 +730,14 @@ function ProjectsSection({
                 }
                 onEdit={onEdit}
               />
+
             )
           )}
+
         </div>
+
       )}
+
     </>
   );
 }
@@ -661,10 +752,13 @@ function MessagesSection({
   error,
   onOpen,
   onDelete,
-}) {
+}: MessagesSectionProps) {
+
   return (
     <section>
+
       <div className="mb-8">
+
         <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-[#c4956a]">
           Correspondance
         </span>
@@ -676,6 +770,7 @@ function MessagesSection({
         <p className="mt-2 text-sm text-[#6b5c4e]">
           Les demandes envoyées depuis votre site.
         </p>
+
       </div>
 
       {error && (
@@ -685,13 +780,17 @@ function MessagesSection({
       )}
 
       {loading ? (
+
         <div className="py-20 text-center">
           <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#6b5c4e]">
             Chargement des messages...
           </span>
         </div>
+
       ) : messages.length === 0 ? (
+
         <div className="border border-dashed border-[#c4956a55] py-24 text-center">
+
           <span className="text-[10px] uppercase tracking-[0.3em] text-[#c4956a]">
             Correspondance
           </span>
@@ -703,11 +802,16 @@ function MessagesSection({
           <p className="mt-2 text-sm text-[#6b5c4e]">
             Les messages envoyés depuis la page contact apparaîtront ici.
           </p>
+
         </div>
+
       ) : (
+
         <div className="space-y-3">
+
           {messages.map(
             (message) => (
+
               <MessageRow
                 key={message.id}
                 message={message}
@@ -715,15 +819,17 @@ function MessagesSection({
                   onOpen(message)
                 }
                 onDelete={() =>
-                  onDelete(
-                    message.id
-                  )
+                  onDelete(message.id)
                 }
               />
+
             )
           )}
+
         </div>
+
       )}
+
     </section>
   );
 }
@@ -736,7 +842,8 @@ function MessageRow({
   message,
   onOpen,
   onDelete,
-}) {
+}: MessageRowProps) {
+
   const date =
     formatMessageDate(
       message.createdAt
@@ -750,14 +857,19 @@ function MessageRow({
           : "border-[#c4956a88] bg-[#ede0cc]/50"
       }`}
     >
+
       <button
         type="button"
         onClick={onOpen}
         className="w-full px-5 py-5 text-left sm:px-6"
       >
+
         <div className="flex items-start justify-between gap-5">
+
           <div className="min-w-0 flex-1">
+
             <div className="flex flex-wrap items-center gap-3">
+
               {!message.read && (
                 <span className="bg-[#8f3f32] px-2 py-1 text-[8px] uppercase tracking-[0.2em] text-white">
                   Nouveau
@@ -767,6 +879,7 @@ function MessageRow({
               <h3 className="font-serif text-xl text-[#1a1410]">
                 {message.name}
               </h3>
+
             </div>
 
             <p className="mt-1 text-xs text-[#c4956a]">
@@ -776,9 +889,11 @@ function MessageRow({
             <p className="mt-3 line-clamp-2 text-sm leading-6 text-[#6b5c4e]">
               {message.message}
             </p>
+
           </div>
 
           <div className="hidden shrink-0 text-right sm:block">
+
             <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-[#6b5c4e]">
               {date}
             </span>
@@ -786,11 +901,15 @@ function MessageRow({
             <span className="mt-3 block text-[9px] uppercase tracking-[0.15em] text-[#c4956a]">
               Voir
             </span>
+
           </div>
+
         </div>
+
       </button>
 
       <div className="flex justify-end border-t border-[#c4956a22] px-5 py-2 sm:px-6">
+
         <button
           type="button"
           onClick={onDelete}
@@ -798,7 +917,9 @@ function MessageRow({
         >
           Supprimer
         </button>
+
       </div>
+
     </article>
   );
 }
@@ -811,12 +932,18 @@ function MessageModal({
   message,
   onClose,
   onDelete,
-}) {
+}: MessageModalProps) {
+
   useEffect(() => {
-    function handleKeyDown(event) {
+
+    function handleKeyDown(
+      event: KeyboardEvent
+    ): void {
+
       if (event.key === "Escape") {
         onClose();
       }
+
     }
 
     document.addEventListener(
@@ -825,37 +952,51 @@ function MessageModal({
     );
 
     return () => {
+
       document.removeEventListener(
         "keydown",
         handleKeyDown
       );
+
     };
+
   }, [onClose]);
 
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center bg-[#1a1410]/70 px-5 backdrop-blur-sm"
-      onMouseDown={(event) => {
+      onMouseDown={(
+        event: React.MouseEvent<HTMLDivElement>
+      ) => {
+
         if (
           event.target ===
           event.currentTarget
         ) {
           onClose();
         }
+
       }}
     >
+
       <div className="w-full max-w-2xl overflow-hidden border border-[#c4956a55] bg-[#f5ede0] shadow-2xl">
+
         <div className="bg-[#1a1410] px-6 py-6 text-white sm:px-8">
+
           <div className="mb-4 flex items-center gap-3">
+
             <span className="h-px w-7 bg-[#c4956a]" />
 
             <span className="text-[9px] uppercase tracking-[0.3em] text-[#c4956a]">
               El Rayane Immobilier
             </span>
+
           </div>
 
           <div className="flex items-start justify-between gap-5">
+
             <div>
+
               <h2 className="font-serif text-3xl font-light">
                 {message.name}
               </h2>
@@ -863,6 +1004,7 @@ function MessageModal({
               <p className="mt-2 text-sm text-white/60">
                 {message.email}
               </p>
+
             </div>
 
             <button
@@ -872,29 +1014,39 @@ function MessageModal({
             >
               ✕
             </button>
+
           </div>
+
         </div>
 
         <div className="px-6 py-7 sm:px-8">
+
           <div className="mb-5 flex items-center justify-between">
+
             <span className="text-[9px] uppercase tracking-[0.2em] text-[#6b5c4e]">
               Message reçu
             </span>
 
             <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-[#c4956a]">
+
               {formatMessageDate(
                 message.createdAt
               )}
+
             </span>
+
           </div>
 
           <div className="border border-[#c4956a33] bg-[#ede0cc]/50 p-5">
+
             <p className="whitespace-pre-wrap text-sm leading-7 text-[#1a1410]">
               {message.message}
             </p>
+
           </div>
 
           <div className="mt-6 flex gap-3">
+
             <a
               href={`mailto:${message.email}`}
               className="flex flex-1 items-center justify-center bg-[#1a1410] px-4 py-3 text-[9px] uppercase tracking-[0.2em] text-white transition hover:bg-[#c4956a]"
@@ -905,16 +1057,20 @@ function MessageModal({
             <button
               type="button"
               onClick={() => {
-                onDelete(message.id);
+                void onDelete(message.id);
                 onClose();
               }}
               className="border border-[#8f3f32]/40 px-5 py-3 text-[9px] uppercase tracking-[0.2em] text-[#8f3f32] transition hover:bg-[#8f3f32] hover:text-white"
             >
               Supprimer
             </button>
+
           </div>
+
         </div>
+
       </div>
+
     </div>
   );
 }
@@ -923,45 +1079,59 @@ function MessageModal({
 /* DATE */
 /* ===================================================== */
 
-function formatMessageDate(timestamp) {
+
+
+function formatMessageDate(
+  timestamp:
+    | Timestamp
+    | string
+    | number
+    | Date
+    | null
+    | undefined
+) {
   if (!timestamp) {
     return "Date inconnue";
   }
 
-  let date;
+  let date: Date;
 
   if (
-    typeof timestamp?.toDate ===
-    "function"
+    typeof timestamp === "string" ||
+    typeof timestamp === "number"
   ) {
-    date = timestamp.toDate();
-  } else {
     date = new Date(timestamp);
+  } else if (timestamp instanceof Date) {
+    date = timestamp;
+  } else {
+    date = timestamp.toDate();
   }
 
   if (Number.isNaN(date.getTime())) {
     return "Date inconnue";
   }
 
-  return new Intl.DateTimeFormat(
-    "fr-FR",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-  ).format(date);
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 /* ===================================================== */
 /* STAT */
 /* ===================================================== */
 
-function Stat({ label, value }) {
+function Stat({
+  label,
+  value,
+}: StatProps) {
+
   return (
     <div className="border-r border-[#c4956a33] px-5 py-5 last:border-r-0">
+
       <div className="font-serif text-3xl font-light text-[#1a1410]">
         {value}
       </div>
@@ -969,6 +1139,7 @@ function Stat({ label, value }) {
       <div className="mt-1 text-[9px] uppercase tracking-[0.2em] text-[#6b5c4e]">
         {label}
       </div>
+
     </div>
   );
 }
@@ -982,7 +1153,8 @@ function FilterPill({
   onClick,
   label,
   dot,
-}) {
+}: FilterPillProps) {
+
   return (
     <button
       type="button"
@@ -993,6 +1165,7 @@ function FilterPill({
           : "border-[#c4956a55] bg-transparent text-[#6b5c4e] hover:border-[#1a1410] hover:text-[#1a1410]"
       }`}
     >
+
       {dot && (
         <span
           className={`h-1.5 w-1.5 rounded-full ${dot}`}
@@ -1000,6 +1173,7 @@ function FilterPill({
       )}
 
       {label}
+
     </button>
   );
 }
@@ -1011,26 +1185,33 @@ function FilterPill({
 function EmptyState({
   hasProjects,
   onAdd,
-}) {
+}: EmptyStateProps) {
+
   return (
     <div className="flex flex-col items-center justify-center border border-dashed border-[#c4956a55] py-24 text-center">
+
       <span className="text-[10px] uppercase tracking-[0.3em] text-[#c4956a]">
         Portefeuille
       </span>
 
       <h2 className="mt-3 font-serif text-3xl font-light text-[#1a1410]">
+
         {hasProjects
           ? "Aucun projet trouvé"
           : "Votre portefeuille est vide"}
+
       </h2>
 
       <p className="mt-2 max-w-sm text-sm text-[#6b5c4e]">
+
         {hasProjects
           ? "Essayez un autre filtre."
           : "Ajoutez votre premier projet immobilier pour commencer."}
+
       </p>
 
       {!hasProjects && (
+
         <button
           type="button"
           onClick={onAdd}
@@ -1038,7 +1219,9 @@ function EmptyState({
         >
           + Ajouter un projet
         </button>
+
       )}
+
     </div>
   );
 }
