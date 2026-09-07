@@ -8,7 +8,7 @@ export default function Footer() {
         {/* BRAND */}
         <div>
          <div className="font-serif text-4xl font-light">
-  El Rayane Immobilier
+  Rayen House Immo
 </div>
 
 <p className="mt-6 max-w-xs text-sm leading-8 text-white/40">
@@ -63,17 +63,16 @@ export default function Footer() {
           </h4>
 
           <ul className="space-y-4">
-            <li className="text-sm text-white/45">
-              +213 000 000 000
+            <li  className="text-sm text-white/45">
+            <a href="tel:+213550470287" className="text-sm text-white/45 transition hover:text-[#c4956a]">
+              +213 550 47 02 87</a>
             </li>
 
             <li className="text-sm text-white/45">
-              contact@elrayane-immo.dz
+              <a href="mailto:contact@rayenhouseimmo.com" className="text-sm text-white/45 transition hover:text-[#c4956a]"> contact@rayenhouseimmo.com</a>
             </li>
 
-            <li className="text-sm text-white/45">
-              Alger — Lorem District
-            </li>
+           
 
             <li className="text-sm text-white/30 italic">
               Disponible sur rendez-vous uniquement
@@ -108,7 +107,7 @@ export default function Footer() {
         </p>
 
         <div className="flex justify-center gap-6 lg:justify-end">
-          {["Facebook", "Instagram", "LinkedIn"].map((item) => (
+          {["Facebook", "Instagram", "WhatsApp"].map((item) => (
             <a
               key={item}
               href="#"

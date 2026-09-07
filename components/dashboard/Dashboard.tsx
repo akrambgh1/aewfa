@@ -15,6 +15,7 @@ import {
   subscribeToMessages,
   markMessageAsRead,
   deleteMessage,
+  addReplyToMessage, // Ensure this exists in your firestore helpers
 } from "@/lib/dashboard/firestore";
 
 import { useDashboardAuth } from "@/context/dashboard/AuthContext";
@@ -39,18 +40,23 @@ export interface ProjectData {
   [key: string]: unknown;
 }
 
+export interface MessageReply {
+  text: string;
+  sentAt: Timestamp | Date | string | number;
+}
+
 export interface ContactMessage {
   id: string;
   name: string;
   email: string;
   message: string;
   read: boolean;
-  createdAt?: Timestamp | Date | string | number | null;
+  createdAt?: Timestamp | Date | string | number | { seconds: number; nanoseconds: number } | null;
+  replies?: MessageReply[];
   [key: string]: unknown;
 }
 
 type Filter = "all" | string;
-
 type ActiveSection = "projects" | "messages";
 
 interface ProjectsSectionProps {
@@ -60,10 +66,7 @@ interface ProjectsSectionProps {
   loadError: string;
   filter: Filter;
   setFilter: React.Dispatch<React.SetStateAction<Filter>>;
-  updateStatus: (
-    id: string,
-    status: string
-  ) => Promise<void>;
+  updateStatus: (id: string, status: string) => Promise<void>;
   removeProject: (id: string) => Promise<unknown>;
   onAdd: () => void;
   onEdit: (project: Project) => void;
@@ -73,12 +76,8 @@ interface MessagesSectionProps {
   messages: ContactMessage[];
   loading: boolean;
   error: string;
-  onOpen: (
-    message: ContactMessage
-  ) => Promise<void>;
-  onDelete: (
-    id: string
-  ) => Promise<void>;
+  onOpen: (message: ContactMessage) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }
 
 interface MessageRowProps {
@@ -110,70 +109,42 @@ interface EmptyStateProps {
   onAdd: () => void;
 }
 
-type FirebaseTimestampLike = {
-  toDate: () => Date;
-};
-
 /* ===================================================== */
 /* DASHBOARD */
 /* ===================================================== */
 
 export default function Dashboard() {
-  const { user, logout } =
-    useDashboardAuth();
+  const { user, logout } = useDashboardAuth();
 
-  const [projects, setProjects] =
-    useState<Project[]>([]);
-
-  const [messages, setMessages] =
-    useState<ContactMessage[]>([]);
-
-  const [loading, setLoading] =
-    useState<boolean>(true);
-
-  const [messagesLoading, setMessagesLoading] =
-    useState<boolean>(true);
-
-  const [loadError, setLoadError] =
-    useState<string>("");
-
-  const [messagesError, setMessagesError] =
-    useState<string>("");
-
-  const [drawerOpen, setDrawerOpen] =
-    useState<boolean>(false);
-
-  const [editingProject, setEditingProject] =
-    useState<Project | null>(null);
-
-  const [filter, setFilter] =
-    useState<Filter>("all");
-
-  const [activeSection, setActiveSection] =
-    useState<ActiveSection>("projects");
-
-  const [selectedMessage, setSelectedMessage] =
-    useState<ContactMessage | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [messages, setMessages] = useState<ContactMessage[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [messagesLoading, setMessagesLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string>("");
+  const [messagesError, setMessagesError] = useState<string>("");
+  const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [activeSection, setActiveSection] = useState<ActiveSection>("projects");
+  const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
 
   /* ===================================================== */
   /* PROJECTS */
   /* ===================================================== */
 
   useEffect(() => {
-    const unsubscribe =
-      subscribeToProjects(
-        (data: Project[]) => {
-          setProjects(data);
-          setLoading(false);
-        },
-        () => {
-          setLoadError(
-            "Impossible de charger les projets. Vérifiez votre connexion et vos règles Firestore."
-          );
-
-          setLoading(false);
-        }
-      );
+    const unsubscribe = subscribeToProjects(
+      (data: Project[]) => {
+        setProjects(data);
+        setLoading(false);
+      },
+      () => {
+        setLoadError(
+          "Impossible de charger les projets. Vérifiez votre connexion et vos règles Firestore."
+        );
+        setLoading(false);
+      }
+    );
 
     return unsubscribe;
   }, []);
@@ -183,112 +154,60 @@ export default function Dashboard() {
   /* ===================================================== */
 
   useEffect(() => {
-    const unsubscribe =
-      subscribeToMessages(
-        (data: ContactMessage[]) => {
-          setMessages(data);
-          setMessagesLoading(false);
-        },
-        () => {
-          setMessagesError(
-            "Impossible de charger les messages."
-          );
-
-          setMessagesLoading(false);
-        }
-      );
+    const unsubscribe = subscribeToMessages(
+      (data: ContactMessage[]) => {
+        setMessages(data);
+        setMessagesLoading(false);
+      },
+      () => {
+        setMessagesError("Impossible de charger les messages.");
+        setMessagesLoading(false);
+      }
+    );
 
     return unsubscribe;
   }, []);
 
   /* ===================================================== */
-  /* ADD PROJECT */
+  /* ACTIONS */
   /* ===================================================== */
 
-  async function addProject(
-    data: ProjectData
-  ): Promise<void> {
+  async function addProject(data: ProjectData): Promise<void> {
     await addProjectDb(data);
-
     setDrawerOpen(false);
     setEditingProject(null);
   }
 
-  /* ===================================================== */
-  /* EDIT PROJECT */
-  /* ===================================================== */
-
-  async function editProject(
-    data: ProjectData
-  ): Promise<void> {
+  async function editProject(data: ProjectData): Promise<void> {
     if (!data?.id) {
-      throw new Error(
-        "Identifiant du projet manquant."
-      );
+      throw new Error("Identifiant du projet manquant.");
     }
-
     const { id, ...projectData } = data;
-
-    await updateProjectDb(
-      id,
-      projectData
-    );
-
+    await updateProjectDb(id, projectData);
     setDrawerOpen(false);
     setEditingProject(null);
   }
 
-  /* ===================================================== */
-  /* OPEN EDITOR */
-  /* ===================================================== */
-
-  function handleEditProject(
-    project: Project
-  ): void {
+  function handleEditProject(project: Project): void {
     setEditingProject(project);
     setDrawerOpen(true);
   }
-
-  /* ===================================================== */
-  /* CLOSE DRAWER */
-  /* ===================================================== */
 
   function handleDrawerClose(): void {
     setDrawerOpen(false);
     setEditingProject(null);
   }
 
-  /* ===================================================== */
-  /* UPDATE STATUS */
-  /* ===================================================== */
-
-  async function updateStatus(
-    id: string,
-    status: string
-  ): Promise<void> {
-    await updateProjectStatus(
-      id,
-      status
-    );
+  async function updateStatus(id: string, status: string): Promise<void> {
+    await updateProjectStatus(id, status);
   }
 
-  /* ===================================================== */
-  /* DELETE PROJECT */
-  /* ===================================================== */
-
-  async function removeProject(
-    id: string
-  ): Promise<unknown> {
+  async function removeProject(id: string): Promise<unknown> {
     if (!id) {
-      throw new Error(
-        "Identifiant du projet manquant."
-      );
+      throw new Error("Identifiant du projet manquant.");
     }
 
-    const url = `/api/projects/${encodeURIComponent(
-      id
-    )}`;
-
+    const url = `/api/projects/${encodeURIComponent(id)}`;
     let response: Response;
 
     try {
@@ -297,13 +216,10 @@ export default function Dashboard() {
         cache: "no-store",
       });
     } catch {
-      throw new Error(
-        "Impossible de contacter le serveur."
-      );
+      throw new Error("Impossible de contacter le serveur.");
     }
 
     let data: unknown = null;
-
     try {
       data = await response.json();
     } catch {
@@ -311,9 +227,7 @@ export default function Dashboard() {
     }
 
     if (!response.ok) {
-      const errorData =
-        data as { error?: string } | null;
-
+      const errorData = data as { error?: string } | null;
       throw new Error(
         errorData?.error ||
           `Impossible de supprimer le projet. Erreur ${response.status}.`
@@ -323,82 +237,50 @@ export default function Dashboard() {
     return data;
   }
 
-  /* ===================================================== */
-  /* MESSAGE ACTIONS */
-  /* ===================================================== */
-
-  async function handleOpenMessage(
-    message: ContactMessage
-  ): Promise<void> {
+  async function handleOpenMessage(message: ContactMessage): Promise<void> {
     setSelectedMessage(message);
 
     if (!message.read) {
       try {
-        await markMessageAsRead(
-          message.id
-        );
+        await markMessageAsRead(message.id);
       } catch (error: unknown) {
-        console.error(
-          "Impossible de marquer le message comme lu:",
-          error
-        );
+        console.error("Impossible de marquer le message comme lu:", error);
       }
     }
   }
 
-  async function handleDeleteMessage(
-    id: string
-  ): Promise<void> {
+  async function handleDeleteMessage(id: string): Promise<void> {
     if (!id) return;
 
     try {
       await deleteMessage(id);
-
-      if (
-        selectedMessage?.id === id
-      ) {
+      if (selectedMessage?.id === id) {
         setSelectedMessage(null);
       }
     } catch (error: unknown) {
-      console.error(
-        "Impossible de supprimer le message:",
-        error
-      );
+      console.error("Impossible de supprimer le message:", error);
     }
   }
 
   /* ===================================================== */
-  /* STATISTICS */
+  /* COMPUTED PROPERTIES */
   /* ===================================================== */
 
   const stats = useMemo(() => {
-    const totalApartments =
-      projects.reduce(
-        (sum, project) =>
-          sum +
-          (Number(project.apartments) ||
-            0),
-        0
-      );
+    const totalApartments = projects.reduce(
+      (sum, project) => sum + (Number(project.apartments) || 0),
+      0
+    );
 
-    const construction =
-      projects.filter(
-        (project) =>
-          project.status ===
-          "construction"
-      ).length;
+    const construction = projects.filter(
+      (project) => project.status === "construction"
+    ).length;
 
-    const completed =
-      projects.filter(
-        (project) =>
-          project.status ===
-          "completed"
-      ).length;
+    const completed = projects.filter(
+      (project) => project.status === "completed"
+    ).length;
 
-    const unreadMessages =
-      messages.filter(
-        (message) => !message.read
-      ).length;
+    const unreadMessages = messages.filter((message) => !message.read).length;
 
     return {
       projects: projects.length,
@@ -410,46 +292,29 @@ export default function Dashboard() {
     };
   }, [projects, messages]);
 
-  /* ===================================================== */
-  /* FILTER PROJECTS */
-  /* ===================================================== */
-
   const visible = useMemo(() => {
-    if (filter === "all") {
-      return projects;
-    }
-
-    return projects.filter(
-      (project) =>
-        project.status === filter
-    );
+    if (filter === "all") return projects;
+    return projects.filter((project) => project.status === filter);
   }, [projects, filter]);
 
   return (
     <div className="min-h-screen bg-[#f5ede0]">
-
       <header className="border-b border-[#c4956a33] bg-[#f5ede0]">
-
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8 sm:flex-row sm:items-end sm:justify-between">
-
           <div>
             <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#c4956a]">
               El Rayane Immobilier
             </span>
-
             <h1 className="mt-2 font-serif text-5xl font-light text-[#1a1410]">
               Tableau de bord
             </h1>
-
             <p className="mt-2 text-sm text-[#6b5c4e]">
               Gestion de votre portefeuille immobilier
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-
-            {activeSection ===
-              "projects" && (
+            {activeSection === "projects" && (
               <button
                 type="button"
                 onClick={() => {
@@ -470,123 +335,67 @@ export default function Dashboard() {
             >
               Déconnexion
             </button>
-
           </div>
-
         </div>
 
         <div className="mx-auto max-w-6xl px-6">
-
           <div className="flex gap-8">
-
             <button
               type="button"
-              onClick={() =>
-                setActiveSection(
-                  "projects"
-                )
-              }
+              onClick={() => setActiveSection("projects")}
               className={`relative pb-4 text-[10px] uppercase tracking-[0.2em] transition ${
-                activeSection ===
-                "projects"
+                activeSection === "projects"
                   ? "text-[#1a1410]"
                   : "text-[#6b5c4e] hover:text-[#1a1410]"
               }`}
             >
               Projets
-
-              {activeSection ===
-                "projects" && (
+              {activeSection === "projects" && (
                 <span className="absolute bottom-0 left-0 right-0 h-px bg-[#c4956a]" />
               )}
-
             </button>
 
             <button
               type="button"
-              onClick={() =>
-                setActiveSection(
-                  "messages"
-                )
-              }
+              onClick={() => setActiveSection("messages")}
               className={`relative flex items-center gap-2 pb-4 text-[10px] uppercase tracking-[0.2em] transition ${
-                activeSection ===
-                "messages"
+                activeSection === "messages"
                   ? "text-[#1a1410]"
                   : "text-[#6b5c4e] hover:text-[#1a1410]"
               }`}
             >
               Messages
-
-              {stats.unreadMessages >
-                0 && (
+              {stats.unreadMessages > 0 && (
                 <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#8f3f32] px-1.5 text-[8px] text-white">
                   {stats.unreadMessages}
                 </span>
               )}
-
-              {activeSection ===
-                "messages" && (
+              {activeSection === "messages" && (
                 <span className="absolute bottom-0 left-0 right-0 h-px bg-[#c4956a]" />
               )}
-
             </button>
-
           </div>
-
         </div>
 
-        {activeSection ===
-          "projects" && (
+        {activeSection === "projects" && (
           <div className="mx-auto grid max-w-6xl grid-cols-2 border-t border-[#c4956a33] sm:grid-cols-4">
-
-            <Stat
-              label="Projets"
-              value={stats.projects}
-            />
-
-            <Stat
-              label="Appartements"
-              value={stats.apartments}
-            />
-
-            <Stat
-              label="En construction"
-              value={stats.construction}
-            />
-
-            <Stat
-              label="Terminés"
-              value={stats.completed}
-            />
-
+            <Stat label="Projets" value={stats.projects} />
+            <Stat label="Appartements" value={stats.apartments} />
+            <Stat label="En construction" value={stats.construction} />
+            <Stat label="Terminés" value={stats.completed} />
           </div>
         )}
 
-        {activeSection ===
-          "messages" && (
+        {activeSection === "messages" && (
           <div className="mx-auto grid max-w-6xl grid-cols-2 border-t border-[#c4956a33]">
-
-            <Stat
-              label="Messages"
-              value={stats.messages}
-            />
-
-            <Stat
-              label="Non lus"
-              value={stats.unreadMessages}
-            />
-
+            <Stat label="Messages" value={stats.messages} />
+            <Stat label="Non lus" value={stats.unreadMessages} />
           </div>
         )}
-
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-8">
-
-        {activeSection ===
-        "projects" ? (
-
+        {activeSection === "projects" ? (
           <ProjectsSection
             projects={projects}
             visible={visible}
@@ -602,9 +411,7 @@ export default function Dashboard() {
             }}
             onEdit={handleEditProject}
           />
-
         ) : (
-
           <MessagesSection
             messages={messages}
             loading={messagesLoading}
@@ -612,32 +419,23 @@ export default function Dashboard() {
             onOpen={handleOpenMessage}
             onDelete={handleDeleteMessage}
           />
-
         )}
-
       </main>
 
       <AddProjectDrawer
         open={drawerOpen}
         onClose={handleDrawerClose}
-        onSubmit={
-          editingProject
-            ? editProject
-            : addProject
-        }
+        onSubmit={editingProject ? editProject : addProject}
         project={editingProject}
       />
 
       {selectedMessage && (
         <MessageModal
           message={selectedMessage}
-          onClose={() =>
-            setSelectedMessage(null)
-          }
+          onClose={() => setSelectedMessage(null)}
           onDelete={handleDeleteMessage}
         />
       )}
-
     </div>
   );
 }
@@ -661,31 +459,20 @@ function ProjectsSection({
   return (
     <>
       <div className="mb-8 flex flex-wrap gap-2">
-
         <FilterPill
           active={filter === "all"}
-          onClick={() =>
-            setFilter("all")
-          }
+          onClick={() => setFilter("all")}
           label="Tous les projets"
         />
-
         {STATUSES.map((status) => (
-
           <FilterPill
             key={status.id}
-            active={
-              filter === status.id
-            }
-            onClick={() =>
-              setFilter(status.id)
-            }
+            active={filter === status.id}
+            onClick={() => setFilter(status.id)}
             label={status.label}
             dot={status.dot}
           />
-
         ))}
-
       </div>
 
       {loadError && (
@@ -695,49 +482,27 @@ function ProjectsSection({
       )}
 
       {loading ? (
-
         <div className="py-20 text-center">
           <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#6b5c4e]">
             Chargement des projets...
           </span>
         </div>
-
       ) : visible.length === 0 ? (
-
-        <EmptyState
-          hasProjects={
-            projects.length > 0
-          }
-          onAdd={onAdd}
-        />
-
+        <EmptyState hasProjects={projects.length > 0} onAdd={onAdd} />
       ) : (
-
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-
-          {visible.map(
-            (project, index) => (
-
-              <ProjectCard
-                key={project.id}
-                project={project}
-                index={index}
-                onStatusChange={
-                  updateStatus
-                }
-                onDelete={
-                  removeProject
-                }
-                onEdit={onEdit}
-              />
-
-            )
-          )}
-
+          {visible.map((project, index) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              index={index}
+              onStatusChange={updateStatus}
+              onDelete={removeProject}
+              onEdit={onEdit}
+            />
+          ))}
         </div>
-
       )}
-
     </>
   );
 }
@@ -753,24 +518,18 @@ function MessagesSection({
   onOpen,
   onDelete,
 }: MessagesSectionProps) {
-
   return (
     <section>
-
       <div className="mb-8">
-
         <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-[#c4956a]">
           Correspondance
         </span>
-
         <h2 className="mt-2 font-serif text-4xl font-light text-[#1a1410]">
           Messages
         </h2>
-
         <p className="mt-2 text-sm text-[#6b5c4e]">
           Les demandes envoyées depuis votre site.
         </p>
-
       </div>
 
       {error && (
@@ -780,56 +539,35 @@ function MessagesSection({
       )}
 
       {loading ? (
-
         <div className="py-20 text-center">
           <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#6b5c4e]">
             Chargement des messages...
           </span>
         </div>
-
       ) : messages.length === 0 ? (
-
         <div className="border border-dashed border-[#c4956a55] py-24 text-center">
-
           <span className="text-[10px] uppercase tracking-[0.3em] text-[#c4956a]">
             Correspondance
           </span>
-
           <h2 className="mt-3 font-serif text-3xl font-light text-[#1a1410]">
             Aucun message
           </h2>
-
           <p className="mt-2 text-sm text-[#6b5c4e]">
             Les messages envoyés depuis la page contact apparaîtront ici.
           </p>
-
         </div>
-
       ) : (
-
         <div className="space-y-3">
-
-          {messages.map(
-            (message) => (
-
-              <MessageRow
-                key={message.id}
-                message={message}
-                onOpen={() =>
-                  onOpen(message)
-                }
-                onDelete={() =>
-                  onDelete(message.id)
-                }
-              />
-
-            )
-          )}
-
+          {messages.map((message) => (
+            <MessageRow
+              key={message.id}
+              message={message}
+              onOpen={() => onOpen(message)}
+              onDelete={() => onDelete(message.id)}
+            />
+          ))}
         </div>
-
       )}
-
     </section>
   );
 }
@@ -838,16 +576,8 @@ function MessagesSection({
 /* MESSAGE ROW */
 /* ===================================================== */
 
-function MessageRow({
-  message,
-  onOpen,
-  onDelete,
-}: MessageRowProps) {
-
-  const date =
-    formatMessageDate(
-      message.createdAt
-    );
+function MessageRow({ message, onOpen, onDelete }: MessageRowProps) {
+  const date = formatMessageDate(message.createdAt);
 
   return (
     <article
@@ -857,59 +587,42 @@ function MessageRow({
           : "border-[#c4956a88] bg-[#ede0cc]/50"
       }`}
     >
-
       <button
         type="button"
         onClick={onOpen}
         className="w-full px-5 py-5 text-left sm:px-6"
       >
-
         <div className="flex items-start justify-between gap-5">
-
           <div className="min-w-0 flex-1">
-
             <div className="flex flex-wrap items-center gap-3">
-
               {!message.read && (
                 <span className="bg-[#8f3f32] px-2 py-1 text-[8px] uppercase tracking-[0.2em] text-white">
                   Nouveau
                 </span>
               )}
-
               <h3 className="font-serif text-xl text-[#1a1410]">
                 {message.name}
               </h3>
-
             </div>
 
-            <p className="mt-1 text-xs text-[#c4956a]">
-              {message.email}
-            </p>
-
+            <p className="mt-1 text-xs text-[#c4956a]">{message.email}</p>
             <p className="mt-3 line-clamp-2 text-sm leading-6 text-[#6b5c4e]">
               {message.message}
             </p>
-
           </div>
 
           <div className="hidden shrink-0 text-right sm:block">
-
             <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-[#6b5c4e]">
               {date}
             </span>
-
             <span className="mt-3 block text-[9px] uppercase tracking-[0.15em] text-[#c4956a]">
-              Voir
+              Voir & Répondre
             </span>
-
           </div>
-
         </div>
-
       </button>
 
       <div className="flex justify-end border-t border-[#c4956a22] px-5 py-2 sm:px-6">
-
         <button
           type="button"
           onClick={onDelete}
@@ -917,94 +630,131 @@ function MessageRow({
         >
           Supprimer
         </button>
-
       </div>
-
     </article>
   );
 }
 
 /* ===================================================== */
-/* MESSAGE MODAL */
+/* MESSAGE MODAL WITH REPLY FEATURE */
 /* ===================================================== */
 
-function MessageModal({
-  message,
-  onClose,
-  onDelete,
-}: MessageModalProps) {
+
+function MessageModal({ message, onClose, onDelete }: MessageModalProps) {
+  const [showReplyForm, setShowReplyForm] = useState<boolean>(false);
+  const [replyText, setReplyText] = useState<string>("");
+  const [isSending, setIsSending] = useState<boolean>(false);
+  
+  // Status banner state: null | { type: "success" | "error"; text: string }
+  const [notification, setNotification] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
-
-    function handleKeyDown(
-      event: KeyboardEvent
-    ): void {
-
+    function handleKeyDown(event: KeyboardEvent): void {
       if (event.key === "Escape") {
         onClose();
       }
-
     }
 
-    document.addEventListener(
-      "keydown",
-      handleKeyDown
-    );
-
-    return () => {
-
-      document.removeEventListener(
-        "keydown",
-        handleKeyDown
-      );
-
-    };
-
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
+
+  const templates = [
+    {
+      label: "Demande d'information",
+      text: `Bonjour ${message.name},\n\nMerci de nous avoir contactés. Nous avons bien reçu votre demande concernant nos projets immobiliers.\n\nCordialement,\nL'équipe El Rayane Immobilier`,
+    },
+    {
+      label: "Prise de rendez-vous",
+      text: `Bonjour ${message.name},\n\nNous serions ravis de vous accueillir dans nos bureaux pour échanger sur votre projet.\nQuand seriez-vous disponible ?\n\nCordialement,\nL'équipe El Rayane Immobilier`,
+    },
+  ];
+
+  async function handleSendReply(e: React.FormEvent): Promise<void> {
+    e.preventDefault();
+    if (!replyText.trim()) return;
+
+    setIsSending(true);
+    setNotification(null);
+
+    try {
+      // 1. Dispatch email through Hostinger SMTP
+      const res = await fetch("/api/reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: message.email,
+          subject: "Re: El Rayane Immobilier - Votre demande",
+          text: replyText,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Échec de l'envoi de l'e-mail.");
+      }
+
+      // 2. Optional: Save reply history to Firestore if helper exists
+      if (typeof addReplyToMessage === "function") {
+        await addReplyToMessage(message.id, {
+          text: replyText,
+          sentAt: new Date(),
+        });
+      }
+
+      // Show success notification banner
+      setNotification({
+        type: "success",
+        text: "E-mail envoyé avec succès !",
+      });
+
+      setReplyText("");
+      
+      // Automatically close form after 2 seconds
+      setTimeout(() => {
+        setShowReplyForm(false);
+        setNotification(null);
+      }, 2000);
+
+    } catch (err) {
+      console.error("Reply Error:", err);
+      
+      // Show error notification banner
+      setNotification({
+        type: "error",
+        text: err instanceof Error ? err.message : "Impossible d'envoyer l'e-mail.",
+      });
+    } finally {
+      setIsSending(false);
+    }
+  }
 
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center bg-[#1a1410]/70 px-5 backdrop-blur-sm"
-      onMouseDown={(
-        event: React.MouseEvent<HTMLDivElement>
-      ) => {
-
-        if (
-          event.target ===
-          event.currentTarget
-        ) {
+      onMouseDown={(event: React.MouseEvent<HTMLDivElement>) => {
+        if (event.target === event.currentTarget) {
           onClose();
         }
-
       }}
     >
-
-      <div className="w-full max-w-2xl overflow-hidden border border-[#c4956a55] bg-[#f5ede0] shadow-2xl">
-
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-[#c4956a55] bg-[#f5ede0] shadow-2xl">
         <div className="bg-[#1a1410] px-6 py-6 text-white sm:px-8">
-
           <div className="mb-4 flex items-center gap-3">
-
             <span className="h-px w-7 bg-[#c4956a]" />
-
             <span className="text-[9px] uppercase tracking-[0.3em] text-[#c4956a]">
               El Rayane Immobilier
             </span>
-
           </div>
 
           <div className="flex items-start justify-between gap-5">
-
             <div>
-
-              <h2 className="font-serif text-3xl font-light">
-                {message.name}
-              </h2>
-
-              <p className="mt-2 text-sm text-white/60">
-                {message.email}
-              </p>
-
+              <h2 className="font-serif text-3xl font-light">{message.name}</h2>
+              <p className="mt-2 text-sm text-white/60">{message.email}</p>
             </div>
 
             <button
@@ -1014,97 +764,154 @@ function MessageModal({
             >
               ✕
             </button>
-
           </div>
-
         </div>
 
         <div className="px-6 py-7 sm:px-8">
+          {/* Notification Banner */}
+          {notification && (
+            <div
+              className={`mb-6 flex items-center justify-between border-l-4 p-4 text-xs tracking-wide transition-all ${
+                notification.type === "success"
+                  ? "border-emerald-600 bg-emerald-500/10 text-emerald-900"
+                  : "border-rose-600 bg-rose-500/10 text-rose-900"
+              }`}
+            >
+              <div className="flex items-center gap-2 font-medium">
+                <span>{notification.type === "success" ? "✓" : "✕"}</span>
+                <span>{notification.text}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNotification(null)}
+                className="opacity-60 hover:opacity-100"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           <div className="mb-5 flex items-center justify-between">
-
             <span className="text-[9px] uppercase tracking-[0.2em] text-[#6b5c4e]">
               Message reçu
             </span>
-
             <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-[#c4956a]">
-
-              {formatMessageDate(
-                message.createdAt
-              )}
-
+              {formatMessageDate(message.createdAt)}
             </span>
-
           </div>
 
           <div className="border border-[#c4956a33] bg-[#ede0cc]/50 p-5">
-
             <p className="whitespace-pre-wrap text-sm leading-7 text-[#1a1410]">
               {message.message}
             </p>
-
           </div>
 
-          <div className="mt-6 flex gap-3">
+          {!showReplyForm ? (
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowReplyForm(true)}
+                className="flex-1 bg-[#1a1410] px-4 py-3 text-[9px] uppercase tracking-[0.2em] text-white transition hover:bg-[#c4956a]"
+              >
+                Répondre
+              </button>
 
-            <a
-              href={`mailto:${message.email}`}
-              className="flex flex-1 items-center justify-center bg-[#1a1410] px-4 py-3 text-[9px] uppercase tracking-[0.2em] text-white transition hover:bg-[#c4956a]"
-            >
-              Répondre par e-mail
-            </a>
+              <button
+                type="button"
+                onClick={() => {
+                  void onDelete(message.id);
+                  onClose();
+                }}
+                className="border border-[#8f3f32]/40 px-5 py-3 text-[9px] uppercase tracking-[0.2em] text-[#8f3f32] transition hover:bg-[#8f3f32] hover:text-white"
+              >
+                Supprimer
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSendReply} className="mt-6 border-t border-[#c4956a33] pt-6">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[9px] uppercase tracking-[0.2em] text-[#1a1410]">
+                  Rédiger une réponse
+                </span>
+                <div className="flex gap-2">
+                  {templates.map((tpl, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setReplyText(tpl.text)}
+                      className="border border-[#c4956a55] px-2 py-1 text-[8px] uppercase tracking-[0.1em] text-[#6b5c4e] hover:border-[#1a1410] hover:text-[#1a1410]"
+                    >
+                      {tpl.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                void onDelete(message.id);
-                onClose();
-              }}
-              className="border border-[#8f3f32]/40 px-5 py-3 text-[9px] uppercase tracking-[0.2em] text-[#8f3f32] transition hover:bg-[#8f3f32] hover:text-white"
-            >
-              Supprimer
-            </button>
+              <textarea
+                rows={5}
+                required
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                placeholder="Écrivez votre message de réponse ici..."
+                className="w-full border border-[#c4956a55] bg-white/50 p-4 text-sm text-[#1a1410] focus:border-[#1a1410] focus:outline-none"
+              />
 
-          </div>
-
+              <div className="mt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowReplyForm(false);
+                    setNotification(null);
+                  }}
+                  className="border border-[#c4956a55] px-4 py-2.5 text-[9px] uppercase tracking-[0.2em] text-[#6b5c4e] transition hover:border-[#1a1410]"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSending}
+                  className="bg-[#1a1410] px-5 py-2.5 text-[9px] uppercase tracking-[0.2em] text-white transition hover:bg-[#c4956a] disabled:opacity-50"
+                >
+                  {isSending ? "Envoi en cours..." : "Envoyer"}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
-
       </div>
-
     </div>
   );
 }
 
 /* ===================================================== */
-/* DATE */
+/* DATE UTILITY */
 /* ===================================================== */
 
-
-
 function formatMessageDate(
-  timestamp:
-    | Timestamp
-    | string
-    | number
-    | Date
-    | null
-    | undefined
-) {
-  if (!timestamp) {
-    return "Date inconnue";
-  }
+  timestamp: ContactMessage["createdAt"]
+): string {
+  if (!timestamp) return "Date inconnue";
 
   let date: Date;
 
-  if (
-    typeof timestamp === "string" ||
-    typeof timestamp === "number"
-  ) {
+  if (typeof timestamp === "string" || typeof timestamp === "number") {
     date = new Date(timestamp);
   } else if (timestamp instanceof Date) {
     date = timestamp;
-  } else {
+  } else if (
+    typeof timestamp === "object" &&
+    "toDate" in timestamp &&
+    typeof timestamp.toDate === "function"
+  ) {
     date = timestamp.toDate();
+  } else if (
+    typeof timestamp === "object" &&
+    "seconds" in timestamp &&
+    typeof timestamp.seconds === "number"
+  ) {
+    date = new Date(timestamp.seconds * 1000);
+  } else {
+    return "Date inconnue";
   }
 
   if (Number.isNaN(date.getTime())) {
@@ -1121,40 +928,21 @@ function formatMessageDate(
 }
 
 /* ===================================================== */
-/* STAT */
+/* HELPER COMPONENTS */
 /* ===================================================== */
 
-function Stat({
-  label,
-  value,
-}: StatProps) {
-
+function Stat({ label, value }: StatProps) {
   return (
     <div className="border-r border-[#c4956a33] px-5 py-5 last:border-r-0">
-
-      <div className="font-serif text-3xl font-light text-[#1a1410]">
-        {value}
-      </div>
-
+      <div className="font-serif text-3xl font-light text-[#1a1410]">{value}</div>
       <div className="mt-1 text-[9px] uppercase tracking-[0.2em] text-[#6b5c4e]">
         {label}
       </div>
-
     </div>
   );
 }
 
-/* ===================================================== */
-/* FILTER PILL */
-/* ===================================================== */
-
-function FilterPill({
-  active,
-  onClick,
-  label,
-  dot,
-}: FilterPillProps) {
-
+function FilterPill({ active, onClick, label, dot }: FilterPillProps) {
   return (
     <button
       type="button"
@@ -1165,53 +953,27 @@ function FilterPill({
           : "border-[#c4956a55] bg-transparent text-[#6b5c4e] hover:border-[#1a1410] hover:text-[#1a1410]"
       }`}
     >
-
-      {dot && (
-        <span
-          className={`h-1.5 w-1.5 rounded-full ${dot}`}
-        />
-      )}
-
+      {dot && <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />}
       {label}
-
     </button>
   );
 }
 
-/* ===================================================== */
-/* EMPTY STATE */
-/* ===================================================== */
-
-function EmptyState({
-  hasProjects,
-  onAdd,
-}: EmptyStateProps) {
-
+function EmptyState({ hasProjects, onAdd }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center border border-dashed border-[#c4956a55] py-24 text-center">
-
       <span className="text-[10px] uppercase tracking-[0.3em] text-[#c4956a]">
         Portefeuille
       </span>
-
       <h2 className="mt-3 font-serif text-3xl font-light text-[#1a1410]">
-
-        {hasProjects
-          ? "Aucun projet trouvé"
-          : "Votre portefeuille est vide"}
-
+        {hasProjects ? "Aucun projet trouvé" : "Votre portefeuille est vide"}
       </h2>
-
       <p className="mt-2 max-w-sm text-sm text-[#6b5c4e]">
-
         {hasProjects
           ? "Essayez un autre filtre."
           : "Ajoutez votre premier projet immobilier pour commencer."}
-
       </p>
-
       {!hasProjects && (
-
         <button
           type="button"
           onClick={onAdd}
@@ -1219,9 +981,7 @@ function EmptyState({
         >
           + Ajouter un projet
         </button>
-
       )}
-
     </div>
   );
 }
