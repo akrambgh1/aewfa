@@ -118,7 +118,7 @@ export default function Footer() {
     },
     {
       name: "WhatsApp",
-      href: "#", // Add WhatsApp link here
+      href: "https://wa.me/213550470287",
     },
   ].map((item) => (
     <a
