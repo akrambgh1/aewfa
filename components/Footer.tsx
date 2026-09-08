@@ -107,16 +107,31 @@ export default function Footer() {
         </p>
 
         <div className="flex justify-center gap-6 lg:justify-end">
-          {["Facebook", "Instagram", "WhatsApp"].map((item) => (
-            <a
-              key={item}
-              href="#"
-              className="text-[11px] uppercase tracking-[0.25em] text-white/30 transition hover:text-[#c4956a]"
-            >
-              {item}
-            </a>
-          ))} 
-        </div>
+  {[
+    {
+      name: "Facebook",
+      href: "https://www.facebook.com/profile.php?id=61594009420880",
+    },
+    {
+      name: "Instagram",
+      href: "https://www.instagram.com/rayen_house_immo/",
+    },
+    {
+      name: "WhatsApp",
+      href: "#", // Add WhatsApp link here
+    },
+  ].map((item) => (
+    <a
+      key={item.name}
+      href={item.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-[11px] uppercase tracking-[0.25em] text-white/30 transition hover:text-[#c4956a]"
+    >
+      {item.name}
+    </a>
+  ))}
+</div>
       </div>
     </footer>
   );
